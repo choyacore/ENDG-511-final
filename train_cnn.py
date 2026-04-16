@@ -99,7 +99,7 @@ except ImportError:
 
 # -- Constants ----------------------------------------------------------------
 TASK_CLASSES = {
-    "color":  ["black", "brown", "blonde", "red", "auburn", "gray", "white"],
+    "color":  ["black", "brown", "blonde", "gray"],
     "length": ["short", "medium", "long"],
 }
 

@@ -1,3 +1,13 @@
+# Hair Analysis IoT System
+**ENDG 511 – Industrial IoT Systems & Artificial Intelligence | Team 1**
+
+Darren Taylor · Naishah Adetunji · Sehba Samman
+
+---
+
+## Overview
+
+An edge-based IoT vision system that detects a person's **hair colour** and **hair length** from a live webcam feed and provides real-time personalised styling recommendations.
 ---
 
 ## Quick Start

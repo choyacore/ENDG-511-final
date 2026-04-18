@@ -31,7 +31,7 @@ import cv2
 import numpy as np
 
 from config          import CAMERA_INDEX, FRAME_WIDTH, FRAME_HEIGHT, TARGET_FPS
-from hair_detector   import HairDetector
+from hair_detector   import FaceHairDetector
 from color_classifier import classify_color
 from length_classifier import classify_length
 from recommender     import get_tips
@@ -59,7 +59,7 @@ def _parse_args() -> argparse.Namespace:
 
 # ─── Single-frame pipeline ────────────────────────────────────────────────────
 
-def run_pipeline(frame_bgr: np.ndarray, detector: HairDetector):
+def run_pipeline(frame_bgr: np.ndarray, detector: FaceHairDetector):
     """
     Runs the complete hair analysis pipeline on one frame.
 
@@ -103,7 +103,7 @@ def run_webcam(args: argparse.Namespace) -> None:
     t_prev       = time.perf_counter()
     paused       = False
 
-    with HairDetector() as detector:
+    with FaceHairDetector() as detector:
         while True:
             if not paused:
                 ret, frame = cap.read()
@@ -171,7 +171,7 @@ def run_image(image_path: str) -> None:
 
     print(f"[INFO] Analysing image: {image_path}")
 
-    with HairDetector() as detector:
+    with FaceHairDetector() as detector:
         result = run_pipeline(frame, detector)
 
     if result is None:

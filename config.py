@@ -15,8 +15,8 @@ TARGET_FPS    = 15          # Minimum FPS per project spec (§ Performance Metri
 # ratio < SHORT_MAX  → short   (hair mostly above/at chin level)
 # ratio < MEDIUM_MAX → medium  (hair around shoulder level)
 # else               → long
-LENGTH_SHORT_MAX  = 1.20
-LENGTH_MEDIUM_MAX = 1.70
+short_max  = 1.20
+medium_max = 1.70
 # 1.20 and 1.70 were calibrated against our 30 webcam images 
 # Sehba ran the length classifier against the test set and these
 # cutoffs gave the cleanest short/medium/long split for the face sizes
@@ -26,7 +26,7 @@ LENGTH_MEDIUM_MAX = 1.70
 H: 0–179,  S: 0–255,  V: 0–255
 Entry format:  (h_lo, h_hi, s_lo, s_hi, v_lo, v_hi)'''
 
-HSV_COLOR_RANGES = {
+hsv_range = {
     "black":  (  0, 179,   0, 255,   0,  55),
     "gray":   (  0, 179,   0,  55,  55, 185),
     "white":  (  0, 179,   0,  35, 185, 255),
@@ -41,7 +41,7 @@ HSV_COLOR_RANGES = {
 # leaving at 80 for now, flagged for post-demo tuning
 #not really working on auburn anymore we dont have enough time
 
-COLOR_FALLBACK = "dark"
+color_fallback = "dark"
 
 # Recommendation Rules 
 # Key: (color, length)  →  list of up to 3 styling tips

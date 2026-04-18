@@ -10,7 +10,7 @@ ENDG 511 – Team 1
 import cv2
 import numpy as np
 
-from hair_detector import HairROI
+from hair_detector import FaceHairRegion
 
 
 C_FACE    = (  0, 220,   0)   # We are using gree to box fram the face
@@ -34,7 +34,7 @@ PANEL_PAD  = 8     # margin from frame edge
 
 
 
-def draw_roi_boxes(frame: np.ndarray, roi: HairROI) -> np.ndarray:
+def draw_roi_boxes(frame: np.ndarray, roi: FaceHairRegion) -> np.ndarray:
 
     out = frame.copy()
 

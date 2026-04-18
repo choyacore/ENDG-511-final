@@ -4,7 +4,7 @@
 import cv2
 import numpy as np
 
-from hair_detector import HairRegion
+from hair_detector import FaceHairRegion
 from config import short_max, medium_max
 
 
@@ -20,13 +20,13 @@ scan_stide = 3
 
 def bgr2labpix(bgr: np.ndarray) -> np.ndarray: #convert the dominant hair colour from color_classifier to LAB for distance comparisons in length classifier
     return cv2.cvtColor(
-        bgr.reshape(1, 1, 3), cv2.color_bgr2_lab
+        bgr.reshape(1, 1, 3), cv2.COLOR_BGR2LAB 
     )[0, 0].astype(np.float32)
 
 
 def scan_lowhair(
     frame_bgr:    np.ndarray,
-    region:          HairRegion,
+    region:          FaceHairRegion,
     target_lab:   np.ndarray,
 ) -> int:
  
@@ -47,7 +47,7 @@ def scan_lowhair(
 
 
         strip_lab = cv2.cvtColor(
-            strip_bgr.reshape(1, -1, 3), cv2.color_bgr2_lab
+            strip_bgr.reshape(1, -1, 3), cv2.COLOR_BGR2LAB 
         ).reshape(-1, 3).astype(np.float32)
 
         dists = np.linalg.norm(strip_lab - target_lab, axis=1)
@@ -61,7 +61,7 @@ def scan_lowhair(
 
 def classify_length(
     frame_bgr:    np.ndarray,
-    region:          HairRegion,
+    region:          FaceHairRegion,
     dominant_bgr: np.ndarray,
 ) -> tuple[str, float]:
 

@@ -49,7 +49,7 @@ def _remove_skin_pixels(roi_bgr: np.ndarray) -> np.ndarray:
     if roi_bgr.size == 0:
         return np.empty((0, 3), dtype=np.uint8)
 
-    hsv      = cv2.cvtColor(roi_bgr, cv2.bgr_2_hsv)
+    hsv      = cv2.cvtColor(roi_bgr, cv2.COLOR_BGR2HSV)
     skin_mask = cv2.inRange(hsv, lower_skin, upper_skin)
     non_skin = roi_bgr[skin_mask == 0]
 
@@ -82,7 +82,7 @@ def _dominant_bgr(pixels: np.ndarray) -> np.ndarray:
 
 def _bgr_to_hsv_pixel(bgr: np.ndarray) -> np.ndarray:
     """Convert a single (3,) BGR pixel to HSV (OpenCV convention)."""
-    return cv2.cvtColor(bgr.reshape(1, 1, 3), cv2.bgr_2_hsv)[0, 0]
+    return cv2.cvtColor(bgr.reshape(1, 1, 3), cv2.COLOR_BGR2HSV)[0, 0]
 
 
 def _match_hsv(hsv_pixel: np.ndarray) -> str:

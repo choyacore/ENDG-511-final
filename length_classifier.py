@@ -19,7 +19,7 @@ The length ratio is defined as:
     ratio < LENGTH_MEDIUM_MAX → medium  (shoulder-length)
     else                      → long
 
-ENDG 511 – Team 14  |  Primary owner: Naishah Adetunji
+
 """
 
 import cv2

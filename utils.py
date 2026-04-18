@@ -4,7 +4,7 @@ utils.py – Visualization helpers for the Hair Analysis System.
 Draws bounding boxes, info panels, colour swatches, and FPS overlay
 directly onto OpenCV frames.
 
-ENDG 511 – Team 14
+ENDG 511 – Team 1
 """
 
 import cv2

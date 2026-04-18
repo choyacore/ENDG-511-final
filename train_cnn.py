@@ -1,75 +1,24 @@
-"""
-train_cnn.py – Advanced CNN training for the Hair Analysis IoT System.
-
-Three-stage training pipeline addressing lighting robustness and hair
-diversity challenges identified in the ENDG 511 project proposal:
-
-  Stage 1 – SimCLR Self-Supervised Pretraining
-  ─────────────────────────────────────────────
-  Trains the MobileNetV2 backbone on *unlabelled* hair images using
-  contrastive learning (NT-Xent loss). Two augmented views of the same
-  image are pulled together in embedding space; views from different images
-  are pushed apart. This forces the encoder to learn lighting- and
-  style-invariant features WITHOUT needing labels.
-
-  Key design choices:
-    • Aggressive augmentation (strong colour jitter, grayscale, blur, solar)
-      simulates real-world lighting variation at training time.
-    • Projection head (512 → 128) is used during SSL only, then discarded.
-    • Temperature τ = 0.07 (standard SimCLR setting).
-
-  Stage 2 – Supervised Fine-Tuning
-  ──────────────────────────────────
-  The SSL-pretrained backbone is fine-tuned on labelled data using standard
-  cross-entropy loss. The backbone is partially unfrozen to allow domain
-  adaptation while retaining the invariances learned in Stage 1.
-
-  Stage 3 – Prototypical Network Few-Shot Domain Adaptation
-  ──────────────────────────────────────────────────────────
-  Addresses the hair texture diversity gap: public datasets (e.g., CelebA)
-  over-represent straight/wavy hair, so models generalise poorly to coily,
-  loc'd, or braided textures that our webcam dataset will capture.
-
-  Prototypical Networks compute a class "prototype" as the mean embedding
-  of K support examples per class. A query image is classified by its
-  cosine distance to each prototype. This requires only a handful of
-  labelled examples per new hair type to adapt — a realistic constraint
-  given our small custom dataset.
-
-  Evaluation
-  ──────────
-  Performance is reported per-subgroup (hair type, lighting bucket) using
-  precision, recall, and F1-score to detect class imbalance (e.g., the
-  known over-representation of dark hair in CelebA).
-
-Usage
------
-    # Full pipeline (SSL -> fine-tune -> few-shot eval)
-    python train_cnn.py --task color --data ./dataset
-
-    # Skip SSL (if backbone already pretrained)
-    python train_cnn.py --task color --data ./dataset --skip-ssl
-
-    # Few-shot adapt only (using existing fine-tuned model)
-    python train_cnn.py --task color --data ./dataset --few-shot-only
-
-    # Export to ONNX for Jetson TensorRT
-    python train_cnn.py --task color --data ./dataset --export-onnx
-
-Dataset folder structure
-------------------------
-    dataset/
-    |-- <class>/            <- labelled  (for supervised fine-tuning)
-    |   +-- *.jpg
-    +-- unlabelled/         <- optional unlabelled pool for SSL pretraining
-        +-- *.jpg
-
-    If unlabelled/ is absent, the labelled images are used for SSL
-    (labels are simply ignored in Stage 1 -- this is correct SSL behaviour).
-
-ENDG 511 -- Team 14  |  Darren Taylor . Naishah Adetunji . Sehba Samman
-"""
-
+# ─── Pipeline Notes ───────────────────────────────────────────────────────────
+# Training runs from the Colab notebook (final_endg_511.ipynb) on a T4 GPU.
+# This file is what the notebook imports from -- we don't run main() directly.
+#
+# Things that look redundant but are intentional:
+#
+#   - run_subgroup_evaluation() is also done manually in Cell 13 of the notebook.
+#     We kept both so we can see eval output inline without re-running training.
+#
+#   - SSL_EPOCHS / FINETUNE_EPOCHS are defined here as defaults but the notebook
+#     overrides them via --ssl-epochs 30 --ft-epochs 20 in the CLI call.
+#
+#   - main() is kept so the file still works standalone if needed, but the
+#     notebook is the real entry point.
+#
+# Things cut mid-project:
+#
+#   - Jetson deployment -- switched to Colab T4, ONNX export commented out.
+#   - MediaPipe -- broke on Python 3.12+, replaced with Haar Cascade.
+# ──────────────────────────────────────────────────────────────────────────────
+  
 from __future__ import annotations
 
 import argparse
@@ -82,7 +31,7 @@ from collections import defaultdict
 import cv2
 import numpy as np
 
-# -- PyTorch ------------------------------------------------------------------
+
 try:
     import torch
     import torch.nn as nn
@@ -97,14 +46,17 @@ except ImportError:
     print("[WARN] PyTorch / sklearn not installed.")
     print("       pip install torch torchvision scikit-learn")
 
-# -- Constants ----------------------------------------------------------------
+
 TASK_CLASSES = {
     "color":  ["black", "brown", "blonde", "gray"],
     "length": ["short", "medium", "long"],
 }
 
+#we moved all the SSL stuff to collab since we are not using Jetson anymore
 IMG_SIZE        = 64
 BATCH_SIZE      = 32
+#but the notebook overrides these (`--ssl-epochs 30 --ft-epochs 20`).
+#so the following values are not used anymore for SSL epochs and fine-tune epochs but we kept them here as defaults if someone wants to run the file standalone.
 SSL_EPOCHS      = 30       # Stage 1
 FINETUNE_EPOCHS = 20       # Stage 2
 SSL_LR          = 3e-4
@@ -115,9 +67,9 @@ FEW_SHOT_K      = 5        # K support examples per class
 FEW_SHOT_Q      = 10       # Query examples per class
 
 
-# =============================================================================
-# SECTION 1 -- Datasets
-# =============================================================================
+
+#  Datasets
+
 
 class HairDataset(Dataset if TORCH_AVAILABLE else object):
     """
@@ -199,9 +151,9 @@ class UnlabelledHairDataset(Dataset if TORCH_AVAILABLE else object):
         return self.ssl_transform(img), self.ssl_transform(img)
 
 
-# =============================================================================
-# SECTION 2 -- Augmentation
-# =============================================================================
+
+# Augmentation
+
 
 def get_ssl_augmentation():
     """
@@ -271,9 +223,9 @@ def get_val_transform():
     ])
 
 
-# =============================================================================
-# SECTION 3 -- Models
-# =============================================================================
+
+# Models
+
 
 class SimCLREncoder(nn.Module if TORCH_AVAILABLE else object):
     """
@@ -365,10 +317,9 @@ class HairClassifier(nn.Module if TORCH_AVAILABLE else object):
         emb = self.classifier[:4](h)   # Linear -> BN -> ReLU -> Dropout
         return F.normalize(emb, dim=1)
 
+#in collab
+# NT-Xent Loss (SimCLR)
 
-# =============================================================================
-# SECTION 4 -- NT-Xent Loss (SimCLR)
-# =============================================================================
 
 class NTXentLoss(nn.Module if TORCH_AVAILABLE else object):
     """
@@ -404,10 +355,9 @@ class NTXentLoss(nn.Module if TORCH_AVAILABLE else object):
         loss = -pos + torch.logsumexp(sim, dim=1)
         return loss.mean()
 
+#SSL in collab
+# Stage 1: SimCLR Self-Supervised Pretraining
 
-# =============================================================================
-# SECTION 5 -- Stage 1: SimCLR Self-Supervised Pretraining
-# =============================================================================
 
 def run_ssl_pretraining(data_root, classes, device,
                         epochs=SSL_EPOCHS,
@@ -460,9 +410,9 @@ def run_ssl_pretraining(data_root, classes, device,
     return torch.load(save_path, map_location=device)
 
 
-# =============================================================================
-# SECTION 6 -- Stage 2: Supervised Fine-Tuning
-# =============================================================================
+
+#  Stage 2: Supervised Fine-Tuning
+
 
 def run_supervised_finetuning(data_root, classes, device,
                                backbone_state_dict=None,
@@ -562,9 +512,9 @@ def run_supervised_finetuning(data_root, classes, device,
     return model
 
 
-# =============================================================================
-# SECTION 7 -- Stage 3: Prototypical Network Few-Shot Domain Adaptation
-# =============================================================================
+
+#  Stage 3: Prototypical Network Few-Shot Domain Adaptation
+#moved to collab and we had to use CelebA for other data so couldn't impement it well
 
 def _episode_sample(dataset, classes, k_shot, q_query, device):
     """
@@ -706,9 +656,8 @@ def run_few_shot_adaptation(model, data_root, classes, device,
     print(f"  Best acc = {best_acc:.3f}  |  Model -> {proto_path}\n")
 
 
-# =============================================================================
-# SECTION 8 -- Subgroup Evaluation
-# =============================================================================
+# Subgroup Evaluation
+#we re-did this in collab too
 
 def run_subgroup_evaluation(model, data_root, classes, device, task):
     """
@@ -772,37 +721,10 @@ def run_subgroup_evaluation(model, data_root, classes, device, task):
     print()
 
 
-# =============================================================================
-# SECTION 9 -- ONNX Export (Jetson TensorRT)
-# =============================================================================
-
-def export_onnx(model, task):
-    """
-    Export the trained classifier to ONNX for TensorRT conversion on Jetson.
-
-    Jetson conversion:
-        trtexec --onnx=hair_<task>_classifier.onnx
-                --saveEngine=hair_<task>.engine --fp16
-    """
-    model.eval()
-    dummy     = torch.randn(1, 3, IMG_SIZE, IMG_SIZE)
-    onnx_path = f"hair_{task}_classifier.onnx"
-
-    torch.onnx.export(
-        model, dummy, onnx_path,
-        input_names   = ["input"],
-        output_names  = ["logits"],
-        dynamic_axes  = {"input": {0: "batch"}, "logits": {0: "batch"}},
-        opset_version = 11,
-    )
-    print(f"[ONNX] Exported -> {onnx_path}")
-    print(f"       On Jetson: trtexec --onnx={onnx_path} "
-          f"--saveEngine=hair_{task}.engine --fp16\n")
 
 
-# =============================================================================
-# SECTION 10 -- Inference helper (used by main.py)
-# =============================================================================
+#  Inference helper (used by main.py)
+
 
 def load_classifier(task: str, device_str: str = "cpu"):
     """
@@ -838,9 +760,6 @@ def load_classifier(task: str, device_str: str = "cpu"):
     return model, classes
 
 
-# =============================================================================
-# SECTION 11 -- CLI
-# =============================================================================
 
 def _parse_args():
     p = argparse.ArgumentParser(
@@ -863,8 +782,7 @@ def _parse_args():
                    help="Stage 3 only, using an existing fine-tuned model")
     p.add_argument("--eval-only",     action="store_true",
                    help="Subgroup evaluation only")
-    p.add_argument("--export-onnx",   action="store_true",
-                   help="Export final model to ONNX for Jetson TensorRT")
+
     return p.parse_args()
 
 
@@ -903,8 +821,8 @@ def main():
         run_few_shot_adaptation(model, args.data, classes,
                                 device, args.episodes, args.task)
         run_subgroup_evaluation(model, args.data, classes, device, args.task)
-        if args.export_onnx:
-            export_onnx(model, args.task)
+        # if args.export_onnx:
+        #     export_onnx(model, args.task)
         return
 
     # -- Stage 1: SimCLR SSL -------------------------------------------------
@@ -933,9 +851,8 @@ def main():
     # -- Subgroup evaluation -------------------------------------------------
     run_subgroup_evaluation(model, args.data, classes, device, args.task)
 
-    # -- ONNX export ---------------------------------------------------------
-    if args.export_onnx:
-        export_onnx(model, args.task)
+    # if args.export_onnx:
+    #     export_onnx(model, args.task)
 
     print(f"[ALL DONE]  task={args.task}  classes={classes}\n")
 

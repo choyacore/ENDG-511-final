@@ -19,6 +19,7 @@ Controls (webcam window)
 
 ENDG 511 – Team 14
 """
+#inspired by ENDG 410's webcam capture code, but heavily modified for our specific use case 
 
 import argparse
 import os

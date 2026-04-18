@@ -1,8 +1,9 @@
 """
 config.py – Central configuration for the Hair Analysis IoT System.
-ENDG 511 – Team 14  |  Darren Taylor · Naishah Adetunji · Sehba Samman
+ENDG 511 – Team 1  |  Darren Taylor · Naishah Adetunji · Sehba Samman
 """
-
+#https://pmc.ncbi.nlm.nih.gov/articles/PMC3254613/
+#https://docs.opencv.org/4.x/df/d9d/tutorial_py_colorspaces.html
 # ─── Camera & Display ─────────────────────────────────────────────────────────
 CAMERA_INDEX  = 0
 FRAME_WIDTH   = 640
@@ -35,6 +36,7 @@ COLOR_FALLBACK = "dark"
 # Key: (color, length)  →  list of up to 3 styling tips
 RECOMMENDATIONS: dict[tuple[str, str], list[str]] = {
     # ── BLACK ─────────────────────────────────────────────────────────────────
+    #https://www.schwarzkopf.com/insider-tips/expert-tips/color-trends-for-black-hair.html
     ("black", "short"):  [
         "A fade or textured crop keeps black hair looking sharp.",
         "Visit the barber every 3–4 weeks to maintain clean edges.",
@@ -51,6 +53,7 @@ RECOMMENDATIONS: dict[tuple[str, str], list[str]] = {
         "Trim 1–2 cm every 8–10 weeks to prevent split ends.",
     ],
     # ── BROWN ─────────────────────────────────────────────────────────────────
+    #https://www.glamour.com/gallery/dark-brown-hair-color-ideas
     ("brown", "short"):  [
         "A textured quiff or side part complements brown tones well.",
         "Light-hold wax keeps the style flexible all day.",
@@ -67,6 +70,7 @@ RECOMMENDATIONS: dict[tuple[str, str], list[str]] = {
         "Argan oil tames flyaways without weighing hair down.",
     ],
     # ── BLONDE ────────────────────────────────────────────────────────────────
+    #https://www.thehairstyler.com/features/articles/hair-color/blonde-hair-color-tips-tricks-suggestions
     ("blonde", "short"): [
         "A pixie cut or buzz brings out the boldness of blonde.",
         "Purple shampoo once a week prevents brassiness.",
@@ -83,6 +87,7 @@ RECOMMENDATIONS: dict[tuple[str, str], list[str]] = {
         "Limit heat styling to 3 times per week maximum.",
     ],
     # ── RED ───────────────────────────────────────────────────────────────────
+    #https://www.lorealparisusa.com/beauty-magazine/hair-color/hair-color-tutorials/hair-color-tips-red-hair
     ("red", "short"):    [
         "Use colour-safe shampoo — red fades faster than any other shade.",
         "A sharp cut showcases the vivid hue at its best.",
@@ -99,6 +104,7 @@ RECOMMENDATIONS: dict[tuple[str, str], list[str]] = {
         "Braids are a protective style that preserve both length and colour.",
     ],
     # ── AUBURN ────────────────────────────────────────────────────────────────
+    #https://www.lorealparisusa.com/beauty-magazine/hair-color/hair-color-tutorials/how-to-get-auburn-hair
     ("auburn", "short"): [
         "A tapered cut showcases warm auburn tones perfectly.",
         "Colour-safe shampoo preserves the warmth.",
@@ -115,6 +121,7 @@ RECOMMENDATIONS: dict[tuple[str, str], list[str]] = {
         "Braid at night to prevent tangles and breakage.",
     ],
     # ── GRAY ──────────────────────────────────────────────────────────────────
+    #https://therighthairstyles.com/gray-blending-for-dark-hair/
     ("gray", "short"):   [
         "Embrace the silver — a clean fade looks polished.",
         "Blue-tinted shampoo neutralises yellow tones.",
@@ -146,7 +153,7 @@ RECOMMENDATIONS: dict[tuple[str, str], list[str]] = {
         "Trim every 8 weeks to prevent fragile ends from breaking.",
         "A silk hair wrap overnight prevents tangling.",
     ],
-    # ── DARK (fallback) ───────────────────────────────────────────────────────
+    # ── DARK (for colored shaded hair with complex gradient) ───────────────────────────────────────────────────────
     ("dark", "short"):   [
         "A textured crop or fade suits your hair tone well.",
         "Light-hold product adds definition.",

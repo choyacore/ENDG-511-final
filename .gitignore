@@ -1,0 +1,3 @@
+echo "dataset/" >> .gitignore
+echo "__pycache__/" >> .gitignore
+echo ".vscode/" >> .gitignore

@@ -4,7 +4,7 @@ main.py – Hair Analysis IoT System entry point.
 Runs the full pipeline in a live webcam loop (or on a single image).
 
 Usage
------
+
     # Live webcam (default)
     python main.py
 
@@ -15,12 +15,12 @@ Usage
     python main.py --image path/to/photo.jpg
 
 Keyboard shortcuts (webcam mode)
----------------------------------
+
     q / ESC  – quit
     s        – save annotated frame as PNG
     p        – pause / resume
 
-ENDG 511 – Team 14  |  Darren Taylor · Naishah Adetunji · Sehba Samman
+#ENDG 410 webcam code inspired
 """
 
 import argparse
@@ -61,11 +61,9 @@ def _parse_args() -> argparse.Namespace:
 
 def run_pipeline(frame_bgr: np.ndarray, detector: HairDetector):
     """
-    Run the complete hair analysis pipeline on one frame.
+    Runs the complete hair analysis pipeline on one frame.
 
-    Returns
-    -------
-    (color_label, length_label, dominant_bgr, tips, roi)
+    Returns(color_label, length_label, dominant_bgr, tips, roi)
     or None if no face was detected.
     """
     roi = detector.detect(frame_bgr)

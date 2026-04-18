@@ -105,7 +105,6 @@ def _match_hsv(hsv_pixel: np.ndarray) -> str:
     return color_fallback
 
 
-# ─── Public API ───────────────────────────────────────────────────────────────
 
 def classify_color(
     frame_bgr: np.ndarray,

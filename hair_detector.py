@@ -20,6 +20,10 @@ from dataclasses import dataclass
 from typing import Optional
 
 
+# TODO: currently misses faces that arent close to camera
+
+
+
 FACE_CASCADE = cv2.CascadeClassifier(
     cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
 )
@@ -53,11 +57,19 @@ class FaceHairRegion:
     approx_landmark:  np.ndarray   # just face corners , enough for debug box
 
 
+# TODO: 0.6 hair_top ratio clips very tall hairstyles (e.g. high buns)
+# Sehba flagged this during length classifier testing -- fine for demo
+# but worth revisiting if we expand the dataset
+#research what happens for bald people (was asked during the presentation)
+
+
 class FaceHairDetector:
 
     def __init__(self, max_faces=1,
                  min_detection_confidence=0.5,
                  min_tracking_confidence=0.5):
+        # params kept for API compatibility in case we swap back to MediaPipe
+        # Haar Cascade doesn't use any of these -- only self._cascade matters
         self._cascade = FACE_CASCADE
 
     def detect(self, frame_bgr):
@@ -71,7 +83,7 @@ class FaceHairDetector:
         # largest face by area = closest to camera = the user, ignore background faces
         x, y, w, h = max(faces, key=lambda f: f[2] * f[3])
         return self.extract_hair_region(x, y, w, h, frame_bgr.shape[:2])
-
+    
     def extract_hair_region(self, x, y, w, h, frame_shape):
         fh, fw     = frame_shape
         face_box   = (int(x), int(y), int(w), int(h))
@@ -80,14 +92,13 @@ class FaceHairDetector:
         pad_x      = int(w * 0.20)
         hx_min     = max(0, x - pad_x)
         hx_max     = min(fw, x + w + pad_x)
-        hair_top   = max(0, y - int(h * 0.6))
+        hair_top   = max(0, y - int(h * 0.6))# lower values that 0.6 clipped top of hair on longer styles
         hair_box      = (int(hx_min), int(hair_top),
                          int(hx_max - hx_min),
                          max(0, forehead_y - hair_top))
         full_head_box = (int(hx_min), 0, int(hx_max - hx_min), fh)
         approx_landmark  = np.array([[x, y], [x+w, y+h]], dtype=np.int32)
-        return FaceHairRegion
-    (
+        return FaceHairRegion(
             face_box=face_box, hair_box=hair_box,
             full_head_box=full_head_box, forehead_y=forehead_y,
             chin_y=chin_y, approx_landmark=approx_landmark,

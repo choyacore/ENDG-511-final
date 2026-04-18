@@ -17,9 +17,9 @@ Controls (webcam window)
     SPACE  – capture and save the current frame
     q      – quit and print summary
 
-ENDG 511 – Team 14
+ENDG 511 – Team 1
 """
-#inspired by ENDG 410's webcam capture code, but heavily modified for our specific use case 
+#inspired by ENDG 410's webcam picture capture code, but modified for our specific use case 
 
 import argparse
 import os

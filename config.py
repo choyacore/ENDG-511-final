@@ -17,10 +17,15 @@ TARGET_FPS    = 15          # Minimum FPS per project spec (§ Performance Metri
 # else               → long
 LENGTH_SHORT_MAX  = 1.20
 LENGTH_MEDIUM_MAX = 1.70
+# 1.20 and 1.70 were calibrated against our 30 webcam images 
+# Sehba ran the length classifier against the test set and these
+# cutoffs gave the cleanest short/medium/long split for the face sizes
 
-# ─── Hair Color Ranges (HSV, OpenCV convention) ───────────────────────────────
-# H: 0–179,  S: 0–255,  V: 0–255
-# Entry format:  (h_lo, h_hi, s_lo, s_hi, v_lo, v_hi)
+# our Haar cascade was detecting at 640x480
+'''Hair Color Ranges (HSV, OpenCV convention)
+H: 0–179,  S: 0–255,  V: 0–255
+Entry format:  (h_lo, h_hi, s_lo, s_hi, v_lo, v_hi)'''
+
 HSV_COLOR_RANGES = {
     "black":  (  0, 179,   0, 255,   0,  55),
     "gray":   (  0, 179,   0,  55,  55, 185),
@@ -30,10 +35,21 @@ HSV_COLOR_RANGES = {
     "blonde": ( 14,  36,  20, 190, 130, 245),
     "red":    (  0,  12,  80, 255,  55, 220),
 }
+
+# TODO: red and auburn still overlap occasionally under warm indoor lighting
+# -- tried bumping auburn s_lo to 90 but it started missing darker auburn samples
+# leaving at 80 for now, flagged for post-demo tuning
+#not really working on auburn anymore we dont have enough time
+
 COLOR_FALLBACK = "dark"
 
-# ─── Recommendation Rules ─────────────────────────────────────────────────────
+# Recommendation Rules 
 # Key: (color, length)  →  list of up to 3 styling tips
+# Tips sourced from hair care publications (links inline per colour).
+# White has no source link -- tips were written based on general hair care
+# knowledge, couldn't find a single authoritative source for white hair specifically.
+# TODO: find a proper citation for white hair recommendations before final submission
+
 RECOMMENDATIONS: dict[tuple[str, str], list[str]] = {
     # ── BLACK ─────────────────────────────────────────────────────────────────
     #https://www.schwarzkopf.com/insider-tips/expert-tips/color-trends-for-black-hair.html

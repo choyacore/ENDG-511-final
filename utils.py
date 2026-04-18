@@ -12,14 +12,14 @@ import numpy as np
 
 from hair_detector import HairROI
 
-# ─── Colour palette (BGR) ─────────────────────────────────────────────────────
-C_FACE    = (  0, 220,   0)   # green  – face bounding box
-C_HAIR    = ( 30, 165, 255)   # orange – hair bounding box / forehead line
-C_TEXT    = (255, 255, 255)   # white
+
+C_FACE    = (  0, 220,   0)   # We are using gree to box fram the face
+C_HAIR    = ( 30, 165, 255)   # using orange to highlight the hair region 
+C_TEXT    = (255, 255, 255)   # using white for text and labels
 C_PANEL   = ( 25,  25,  25)   # dark panel background
-C_ACCENT  = (100, 220, 255)   # light blue – headings
+C_ACCENT  = (100, 220, 255)   # light blue headings
 C_FPS_OK  = (  0, 220,   0)   # green  – FPS ≥ 15
-C_FPS_BAD = (  0,  80, 220)   # red    – FPS < 15
+C_FPS_BAD = (  0,  80, 220)   # red    – FPS < 15 that means below what we planned
 
 FONT       = cv2.FONT_HERSHEY_SIMPLEX
 FS_TITLE   = 0.70
@@ -32,21 +32,10 @@ PANEL_W    = 285   # info panel width in pixels
 PANEL_PAD  = 8     # margin from frame edge
 
 
-# ─── Public drawing functions ─────────────────────────────────────────────────
+
 
 def draw_roi_boxes(frame: np.ndarray, roi: HairROI) -> np.ndarray:
-    """
-    Overlay face and hair bounding boxes on the frame.
 
-    Parameters
-    ----------
-    frame : BGR input frame (not modified in place)
-    roi   : HairROI from hair_detector.py
-
-    Returns
-    -------
-    Annotated copy of the frame.
-    """
     out = frame.copy()
 
     # Face box
@@ -78,15 +67,12 @@ def draw_info_panel(
     fps:          float,
 ) -> np.ndarray:
     """
-    Render a semi-transparent sidebar panel on the right of the frame.
 
     Shows:
     • Colour swatch + label
     • Length label
-    • Up to 3 styling tips (auto-wrapped)
+    • Up to 3 styling tips 
     • FPS counter
-
-    Returns annotated copy of the frame.
     """
     out = frame.copy()
     fh, fw = out.shape[:2]
@@ -103,13 +89,13 @@ def draw_info_panel(
 
     y = py + 26
 
-    # ── Title ─────────────────────────────────────────────────────────────────
+    # Title 
     cv2.putText(out, "Hair Analysis", (px + 8, y), FONT, FS_TITLE, C_ACCENT, TK_BOLD)
     y += 6
     cv2.line(out, (px + 6, y + 4), (px + pw - 6, y + 4), (80, 80, 80), 1)
     y += 18
 
-    # ── Colour swatch + label ─────────────────────────────────────────────────
+    # Colour swatch + label 
     swatch_c = tuple(int(c) for c in dominant_bgr)
     sw_x, sw_y, sw_s = px + 8, y, 24
     cv2.rectangle(out, (sw_x, sw_y), (sw_x + sw_s, sw_y + sw_s), swatch_c, -1)
@@ -117,16 +103,21 @@ def draw_info_panel(
     cv2.putText(out, f"Color:  {color_label}",
                 (sw_x + sw_s + 8, sw_y + 17), FONT, FS_LABEL, C_TEXT, TK_NORM)
     y += sw_s + 10
-
-    # ── Length label ──────────────────────────────────────────────────────────
-    length_bar = {"short": "█░░", "medium": "██░", "long": "███"}.get(length_label, "?")
+    # unicode block chars for a simple visual indicator next to the length label
+    #https://mike42.me/blog/2018-06-make-better-cli-progress-bars-with-unicode-block-characters
+    length_bars = {
+    "short":  "█░░",
+    "medium": "██░",
+    "long":   "███",
+}
+    length_bar = length_bars.get(length_label, "?")
     cv2.putText(out, f"Length: {length_label}  {length_bar}",
                 (px + 8, y), FONT, FS_LABEL, C_TEXT, TK_NORM)
     y += 6
     cv2.line(out, (px + 6, y + 4), (px + pw - 6, y + 4), (80, 80, 80), 1)
     y += 18
 
-    # ── Styling Tips ──────────────────────────────────────────────────────────
+    
     cv2.putText(out, "Styling Tips", (px + 8, y), FONT, FS_LABEL, C_ACCENT, TK_NORM)
     y += 16
 
@@ -153,7 +144,7 @@ def draw_info_panel(
             y += 17
         y += 5   # gap between tips
 
-    # ── FPS counter ───────────────────────────────────────────────────────────
+    #FPS counter 
     fps_col = C_FPS_OK if fps >= 15 else C_FPS_BAD
     cv2.putText(out, f"FPS: {fps:.1f}",
                 (px + 8, py + ph - 10), FONT, FS_LABEL, fps_col, TK_NORM)
@@ -164,7 +155,7 @@ def draw_info_panel(
 def draw_no_face(frame: np.ndarray) -> np.ndarray:
     """Overlay a 'no face detected' message."""
     out = frame.copy()
-    msg = "No face detected  –  please centre your face in frame"
+    msg = "No face detected please centre your face in frame"
     (tw, th), _ = cv2.getTextSize(msg, FONT, FS_LABEL, TK_NORM)
     tx = max(0, (out.shape[1] - tw) // 2)
     ty = 36

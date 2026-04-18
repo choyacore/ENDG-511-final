@@ -1,10 +1,10 @@
-# ─── Pipeline Notes ───────────────────────────────────────────────────────────
+
 # Training runs from the Colab notebook (final_endg_511.ipynb) on a T4 GPU.
 # This file is what the notebook imports from -- we don't run main() directly.
 #
 # Things that look redundant but are intentional:
 #
-#   - run_subgroup_evaluation() is also done manually in Cell 13 of the notebook.
+#   - check_class_balance() is also done manually in Cell 13 of the notebook.
 #     We kept both so we can see eval output inline without re-running training.
 #
 #   - SSL_EPOCHS / FINETUNE_EPOCHS are defined here as defaults but the notebook
@@ -17,7 +17,7 @@
 #
 #   - Jetson deployment -- switched to Colab T4, ONNX export commented out.
 #   - MediaPipe -- broke on Python 3.12+, replaced with Haar Cascade.
-# ──────────────────────────────────────────────────────────────────────────────
+
   
 from __future__ import annotations
 
@@ -195,10 +195,7 @@ def get_ssl_augmentation():
 
 
 def get_train_augmentation():
-    """
-    Supervised fine-tuning augmentation (milder than SSL).
-    Preserves enough structure for accurate label assignment.
-    """
+
     return transforms.Compose([
         transforms.RandomHorizontalFlip(p=0.5),
         transforms.ColorJitter(brightness=0.4, contrast=0.4,
@@ -228,17 +225,7 @@ def get_val_transform():
 
 
 class SimCLREncoder(nn.Module if TORCH_AVAILABLE else object):
-    """
-    MobileNetV2 backbone + SimCLR projection head.
 
-    Architecture
-    ------------
-    backbone  -> features (1280-d after global avg-pool)
-    projector -> Linear(1280, 512) -> BN -> ReLU -> Linear(512, PROJ_DIM)
-
-    The projector is discarded after SSL pretraining; only the backbone
-    is retained (standard SimCLR practice: Chen et al., ICML 2020).
-    """
 
     def __init__(self):
         super().__init__()
@@ -359,7 +346,7 @@ class NTXentLoss(nn.Module if TORCH_AVAILABLE else object):
 # Stage 1: SimCLR Self-Supervised Pretraining
 
 
-def run_ssl_pretraining(data_root, classes, device,
+def train_simclr_backbone(data_root, classes, device,
                         epochs=SSL_EPOCHS,
                         save_path="ssl_backbone.pt"):
     """
@@ -414,7 +401,7 @@ def run_ssl_pretraining(data_root, classes, device,
 #  Stage 2: Supervised Fine-Tuning
 
 
-def run_supervised_finetuning(data_root, classes, device,
+def finetune_on_celeba(data_root, classes, device,
                                backbone_state_dict=None,
                                epochs=FINETUNE_EPOCHS,
                                task="color"):
@@ -559,13 +546,7 @@ def _episode_sample(dataset, classes, k_shot, q_query, device):
 
 
 def _compute_prototypes(model, support_x, support_y, n_classes):
-    """
-    Compute per-class prototypes as the mean embedding of support examples.
 
-    This is the core Prototypical Networks idea (Snell et al., NeurIPS 2017):
-    each class is represented by the centroid of its support set embeddings
-    in the learned feature space.
-    """
     embeddings = model.get_embedding(support_x)   # (N*K, D)
     prototypes = torch.zeros(n_classes, embeddings.size(1),
                              device=embeddings.device)
@@ -575,8 +556,9 @@ def _compute_prototypes(model, support_x, support_y, n_classes):
             prototypes[cls] = embeddings[mask].mean(0)
     return F.normalize(prototypes, dim=1)
 
+#domain adaptation in collab and we couldn't really complete it since we didnt have webcam data from all hair types
 
-def run_few_shot_adaptation(model, data_root, classes, device,
+def adapt_2_webcam(model, data_root, classes, device,
                              n_episodes=50, task="color"):
     """
     Evaluate and adapt the model using Prototypical Networks.
@@ -618,7 +600,7 @@ def run_few_shot_adaptation(model, data_root, classes, device,
             print(f"[WARN] Episode {ep} skipped: {e}")
             continue
 
-        # -- Inner loop: 5 gradient steps on support set --------------------
+        #Inner loop: 5 gradient steps on support set 
         model.train()
         for _ in range(5):
             protos = _compute_prototypes(model, sx, sy, n_classes)
@@ -629,7 +611,7 @@ def run_few_shot_adaptation(model, data_root, classes, device,
             loss.backward()
             proto_opt.step()
 
-        # -- Evaluate on query set ------------------------------------------
+        #Evaluate on query set
         model.eval()
         with torch.no_grad():
             protos = _compute_prototypes(model, sx, sy, n_classes)
@@ -659,7 +641,7 @@ def run_few_shot_adaptation(model, data_root, classes, device,
 # Subgroup Evaluation
 #we re-did this in collab too
 
-def run_subgroup_evaluation(model, data_root, classes, device, task):
+def check_class_balance(model, data_root, classes, device, task):
     """
     Evaluate per-class precision, recall, and F1-score.
 
@@ -723,15 +705,8 @@ def run_subgroup_evaluation(model, data_root, classes, device, task):
 
 
 
-#  Inference helper (used by main.py)
-
-
 def load_classifier(task: str, device_str: str = "cpu"):
-    """
-    Load a trained HairClassifier for use in the live pipeline (main.py).
-    Prefers proto-adapted weights if available.
-    Returns (model, classes) or (None, None) if weights are not found.
-    """
+
     if not TORCH_AVAILABLE:
         return None, None
 
@@ -803,32 +778,32 @@ def main():
     with open(f"hair_{args.task}_classes.json", "w") as f:
         json.dump(classes, f, indent=2)
 
-    # -- Eval-only ------------------------------------------------------------
+    #Eval-only
     if args.eval_only:
         model, _ = load_classifier(args.task)
         if model is None:
             sys.exit(1)
-        run_subgroup_evaluation(model.to(device), args.data,
+        check_class_balance(model.to(device), args.data,
                                 classes, device, args.task)
         return
 
-    # -- Few-shot-only --------------------------------------------------------
+    #Few-shot-only
     if args.few_shot_only:
         model, _ = load_classifier(args.task)
         if model is None:
             sys.exit(1)
         model = model.to(device)
-        run_few_shot_adaptation(model, args.data, classes,
+        adapt_2_webcam(model, args.data, classes,
                                 device, args.episodes, args.task)
-        run_subgroup_evaluation(model, args.data, classes, device, args.task)
+        check_class_balance(model, args.data, classes, device, args.task)
         # if args.export_onnx:
         #     export_onnx(model, args.task)
         return
 
-    # -- Stage 1: SimCLR SSL -------------------------------------------------
+    #Stage 1: SimCLR SSL
     backbone_sd = None
     if not args.skip_ssl:
-        backbone_sd = run_ssl_pretraining(
+        backbone_sd = train_simclr_backbone(
             args.data, classes, device,
             epochs    = args.ssl_epochs,
             save_path = f"ssl_backbone_{args.task}.pt",
@@ -836,20 +811,20 @@ def main():
     else:
         print("[INFO] Skipping SSL (--skip-ssl). Using ImageNet init.\n")
 
-    # -- Stage 2: Supervised fine-tuning -------------------------------------
-    model = run_supervised_finetuning(
+    #Stage 2: Supervised fine-tuning 
+    model = finetune_on_celeba(
         args.data, classes, device,
         backbone_state_dict = backbone_sd,
         epochs = args.ft_epochs,
         task   = args.task,
     )
 
-    # -- Stage 3: Few-shot domain adaptation ---------------------------------
-    run_few_shot_adaptation(model, args.data, classes,
+    #Stage 3: Few-shot domain adaptation 
+    adapt_2_webcam(model, args.data, classes,
                             device, args.episodes, args.task)
 
-    # -- Subgroup evaluation -------------------------------------------------
-    run_subgroup_evaluation(model, args.data, classes, device, args.task)
+    #Subgroup evaluation 
+    check_class_balance(model, args.data, classes, device, args.task)
 
     # if args.export_onnx:
     #     export_onnx(model, args.task)
